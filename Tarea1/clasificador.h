@@ -32,7 +32,7 @@ void clasificardor(char*  dir,  char* spath,char*  WebServerpath){
 
 	unsigned char *img = stbi_load(dir, &width, &height, &channels, 0); // imagen leída
 	if (img == NULL) { //verifica si se cargó correctamente
-		printf("Error in loading the image\n");
+		//printf("Error in loading the image\n");
 		exit(1);
 	}
 
@@ -114,7 +114,7 @@ strcat(ruta,".jpg");
 	
 	//SE ALMACENA LA IMAGEN EN EL FOLDER CORRESPONDIENTE
 
-	printf ("RUTA: %s\n",ruta);
+	//printf ("RUTA: %s\n",ruta);
 	stbi_write_jpg(ruta, width, height, channels, img, 100);  //se escribe una imagen
 	stbi_image_free(img);
 

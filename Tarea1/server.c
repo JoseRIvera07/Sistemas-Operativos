@@ -372,13 +372,17 @@ int main(int argc, char *argv[])
         getTime(DirLog);
         char buff[100];
         read(connfd, buff, 210);
-        if(!strncmp(buff, "POST /upload", 12)){
+        printf("buff: %s",buff);
+        writefile(buff,connfd,DirLog,DirHist,DirCla); 
+        send(connfd, header, strlen(header), 0);
+        close(connfd);
+        /*if(!strncmp(buff, "POST /upload", 12)){
             
             writefile(buff,connfd,DirLog,DirHist,DirCla); 
             send(connfd, header, strlen(header), 0);
             
             close(connfd);
-        }
+        }*/
         
     }
     return 0;

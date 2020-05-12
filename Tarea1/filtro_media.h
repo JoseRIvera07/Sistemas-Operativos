@@ -141,13 +141,13 @@ void filter_media(char* dir, char* spath,char*  WebServerpath) {
 	
 	
 
-	printf ("RUTA: %s\n",savepath);
+	//printf ("RUTA: %s\n",savepath);
 	stbi_write_jpg(savepath, width, height, channels, po, 100);  //se escribe una imagen
 	
 
 
 
-	printf("Width %dpx, Height %dpx\n",width, height);
+	//printf("Width %dpx, Height %dpx\n",width, height);
 	
 	stbi_image_free(img);
 	//stbi_image_free(output_img);

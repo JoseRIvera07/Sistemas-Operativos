@@ -145,7 +145,7 @@ void filter_mediana(char* dir, char*  spath, char*  WebServerpath) {
 		}
 
 	}
-	printf ("RUTA: %s\n",savepath);
+	//printf ("RUTA: %s\n",savepath);
 	stbi_write_jpg(savepath, width, height, channels, po, 100);  //se escribe una imagen
 	
 	stbi_image_free(img); //se libera la imagen
