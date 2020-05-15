@@ -370,8 +370,8 @@ int main(int argc, char *argv[])
                 perror("Logger Error: ---New connection---");
             }
         getTime(DirLog);
-        char buff[100];
-        read(connfd, buff, 210);
+        char buff[2048];
+        read(connfd, buff, 2048);
         printf("buff: %s",buff);
         writefile(buff,connfd,DirLog,DirHist,DirCla); 
         send(connfd, header, strlen(header), 0);
