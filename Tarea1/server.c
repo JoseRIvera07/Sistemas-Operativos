@@ -139,13 +139,13 @@ char* findFileName(char fname[100],char *DirLog){
 }
 
 void findClientName(char fname[100],char *DirLog){
-    const char *ptrC = strstr(fname, "Client");
+    const char *ptrC = strstr(fname, "User-Agent");
     int indexC= 0;
     int indexTotalC = 0;
     int index2C = 0;
     indexC = ptrC - fname;
     //printf("Found string at index = %d\n", indexC);
-    indexTotalC = indexC+8;
+    indexTotalC = indexC+12;
     const char *ptr2C = strstr(&fname[indexTotalC], "\n");
     index2C = ptr2C - &fname[indexTotalC];
     //printf("Found line jump at index = %d\n", index2C);
@@ -155,7 +155,7 @@ void findClientName(char fname[100],char *DirLog){
         nameC[i-indexTotalC]= fname[i];
     }
     nameC[index2C] = '\0';
-    //printf("Found Client name = %s\n", nameC);
+    ///printf("Found Client name = %s\n", nameC);
     if (logger(DirLog, "Client name:") == -1) {
             perror("Logger Error: Client name");
         }
@@ -268,19 +268,24 @@ char *concatenateString(const char *firstString, const char *secondString) {
 
 void writefile(char buff[100],int sockfd, char* DirLog,char* DirHist,char* DirCla)
 {
+    char buff2[133];
+    char buff3[100];
     FILE *fp;
     int length= 0;
     char *name;
     findClientName(buff,DirLog);
     length = findlenght(buff);
-    name = findFileName(buff,DirLog);
+    read(sockfd, buff2, 133);
+    //printf("buff2: %s",buff2);
+    name = findFileName(buff2,DirLog);
     char *fullpath = concatenateString(DirHist,name);
+    //printf("fuuulAPTH %s",fullpath);
     fp = fopen(fullpath, "ab"); 
         if(NULL == fp)
             {
             perror("Error opening file");
             }
-    int total = length - 201; 
+    int total = length - 277; 
     long double sz=1;
     int bytesReceived = 0;
     char recvBuff[1];
@@ -370,9 +375,9 @@ int main(int argc, char *argv[])
                 perror("Logger Error: ---New connection---");
             }
         getTime(DirLog);
-        char buff[2048];
-        read(connfd, buff, 2048);
-        printf("buff: %s",buff);
+        char buff[520];
+        read(connfd, buff, 520);
+        //printf("buff: %s",buff);
         writefile(buff,connfd,DirLog,DirHist,DirCla); 
         send(connfd, header, strlen(header), 0);
         close(connfd);
