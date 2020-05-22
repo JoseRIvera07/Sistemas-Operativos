@@ -22,7 +22,7 @@
 #include "filtro_media.h"
 #include "clasificador.h"
 
-const char* configDirection = "config.conf";
+const char* configDirection = "/etc/server/config.conf";
 char header[] = 
 "HTTP/1.1 200 OK\n"
 "Access-Control-Allow-Origin: *\n"
@@ -268,14 +268,14 @@ char *concatenateString(const char *firstString, const char *secondString) {
 
 void writefile(char buff[100],int sockfd, char* DirLog,char* DirHist,char* DirCla)
 {
-    char buff2[133];
+    char buff2[134];
     char buff3[100];
     FILE *fp;
     int length= 0;
     char *name;
     findClientName(buff,DirLog);
     length = findlenght(buff);
-    read(sockfd, buff2, 133);
+    read(sockfd, buff2, 134);
     //printf("buff2: %s",buff2);
     name = findFileName(buff2,DirLog);
     char *fullpath = concatenateString(DirHist,name);
