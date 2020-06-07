@@ -32,7 +32,9 @@ char header[] =
 "\n";
 char msg1[] = "ok\n";
 
-
+/**
+ * Este método encuentra el tamño en bytes del archivo enviado
+*/
 int findlenght(char fname[100]){
     const char *ptr = strstr(fname, "Content-Length:");
     int index = 0;
@@ -59,6 +61,9 @@ int findlenght(char fname[100]){
     }
 }
 
+/**
+ * Este método obtiene la hora en que se está ejecutando el archivo enviado
+*/
 void getTime(char *DirLog){
      time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -79,7 +84,9 @@ void getTime(char *DirLog){
             perror("Logger Error: Accept Error");
         }
 }
-
+/**
+ * Este método haya el puerto al que debe de hacer bind el servidor
+*/
 int port(){
     FILE *fp1;
     fp1 = fopen(configDirection, "r"); //cambiar 
@@ -105,7 +112,9 @@ int port(){
         }      
     }  
 }
-
+/**
+ * Este método encuentra el nombre de la imagen enviada por el cliente
+*/
 char* findFileName(char fname[100],char *DirLog){
     const char *ptr = strstr(fname, "filename");
     int index = 0;
@@ -137,7 +146,9 @@ char* findFileName(char fname[100],char *DirLog){
     return fullName;
 
 }
-
+/**
+ * Este método encuentra el nombre del cliente que envió la petición
+*/
 void findClientName(char fname[100],char *DirLog){
     const char *ptrC = strstr(fname, "User-Agent");
     int indexC= 0;
@@ -163,7 +174,9 @@ void findClientName(char fname[100],char *DirLog){
             perror("Logger Error: Client name");
         }
 }
-
+/**
+ * Este método haya el path para guardar el histórico de imágenes
+*/
 char* findDirHist(){
     FILE *fp1;
     fp1 = fopen(configDirection, "r"); 
@@ -190,7 +203,9 @@ char* findDirHist(){
         }      
     }  
 }
-
+/**
+ * Método para hayar el path donde se clasificarán las imágenes
+*/
 char* findDirCla(){
     FILE *fp1;
     fp1 = fopen(configDirection, "r"); 
@@ -217,7 +232,9 @@ char* findDirCla(){
         }      
     }  
 }
-
+/**
+ * Método que encuentra el path para escribir el log del sistema
+*/
 char* findDirLogFile(){
     FILE *fp1;
     fp1 = fopen(configDirection, "r"); 
@@ -244,7 +261,9 @@ char* findDirLogFile(){
         }      
     }  
 }
-
+/**
+ * Concatena dos strings se utiliza para crear el path completo de direcciones
+*/
 char *concatenateString(const char *firstString, const char *secondString) {
     const size_t firstStringSize = strlen(firstString);
     const size_t secondStringSize = strlen(secondString);
@@ -265,7 +284,9 @@ char *concatenateString(const char *firstString, const char *secondString) {
 
     return finalString;
 }
-
+/**
+ * Se encarga de escribir la imagen recibida y de ejecutar los filtros y el clasificador
+*/
 void writefile(char buff[100],int sockfd, char* DirLog,char* DirHist,char* DirCla)
 {
     char buff2[134];
@@ -315,7 +336,9 @@ void writefile(char buff[100],int sockfd, char* DirLog,char* DirHist,char* DirCl
         free(name);
         //printf("\nFile OK....Completed\n");
 }
-
+/**
+ * Método principañ
+*/
 int main(int argc, char *argv[]) 
 {
     system("clear");

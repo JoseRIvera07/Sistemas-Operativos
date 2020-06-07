@@ -32,7 +32,7 @@ void clasificardor(char*  dir,  char* spath,char*  WebServerpath){
 
 	unsigned char *img = stbi_load(dir, &width, &height, &channels, 0); // imagen leída
 	if (img == NULL) { //verifica si se cargó correctamente
-		//printf("Error in loading the image\n");
+		printf("Error in loading the image\n");
 		exit(1);
 	}
 
@@ -69,8 +69,9 @@ void clasificardor(char*  dir,  char* spath,char*  WebServerpath){
 
 	//SE LE QUITA EL FORMATO
 	char* nombre;
+	char* formato;
 	nombre= strtok (pch2,".");
-
+	formato= strtok (NULL,".");
 	
 
 
@@ -107,17 +108,35 @@ else {
 	strcpy(ruta,"");
 }
 
-//SE ARMA LA RUTA
+printf ("FORMATO: %s\n",formato);
+//SE ARMA LA RUTA Y SE ALMACENA LA IMAGEN EN EL FOLDER CORRESPONDIENTE
 strcat(ruta,nombre);
-strcat(ruta,".jpg");
+char* png="png";
+
+
+if (strcmp(formato,png)== 0){
+	strcat(ruta,".png");
+	stbi_write_png(ruta, width, height,channels, img, width *channels);
+}
+
+else if(strcmp(formato,"bmp")== 0){
+	strcat(ruta,".bmp");
+	stbi_write_bmp(ruta, width, height, channels, img);  //se escribe una imagen
+}
+
+else{
+	strcat(ruta,".jpg");
+	stbi_write_jpg(ruta, width, height, channels, img, 100);  //se escribe una imagen
+}
 
 	
-	//SE ALMACENA LA IMAGEN EN EL FOLDER CORRESPONDIENTE
 
-	//printf ("RUTA: %s\n",ruta);
-	stbi_write_jpg(ruta, width, height, channels, img, 100);  //se escribe una imagen
+
+
+	
+
+	printf ("RUTA: %s\n",ruta);
+	
 	stbi_image_free(img);
-
- 
 }
 
