@@ -185,12 +185,12 @@ gameControls:
 		cmp byte [pressD], 1 ;try to move x+1 if 'd' is pressed and set animation accordingly, test other cases otherwise
 		jne .nd
 		inc cx
-		mov bp, playerImg_right
+		mov bp, tankImg_right
 		.nd:
 		cmp byte [pressA], 1 ;try to move x-1 if 'a' is pressed and set animation accordingly, test other cases otherwise
 		jne .na
 		dec cx
-		mov bp, playerImg_left
+		mov bp, tankImg_left
 		.na:
 		call checkForCollision ;check if player would collide on new position, if not change position to new position
 	.nokeyad:
@@ -204,12 +204,12 @@ gameControls:
 		cmp byte [pressW], 1 ;try to move z-1 if 'w' is pressed and set animation accordingly, test other cases otherwise
 		jne .nw
 		dec dx
-		mov bp, playerImg_back
+		mov bp, tankImg_back
 		.nw:
 		cmp byte [pressS], 1 ;try to move z+1 if 's' is pressed and set animation accordingly, test other cases otherwise
 		jne .ns
 		inc dx
-		mov bp, playerImg_front
+		mov bp, tankImg_front
 		.ns:
 		call checkForCollision ;check if player would collide on new position, if not change position to new position
 	.nokeyws:
@@ -339,7 +339,7 @@ setSpawn:
 	
 ;spawn the coins add set the spawn position of the player
 initMap:
-	;call iterateMap  ; iterate the map and add a coin at every 'X' on the map
+	
 	call spawnPlayer ; set spawn for player
 	ret
 	
@@ -358,11 +358,16 @@ drawMap:
 	mov si, boxImg_1
 	mov bp, drawBlock
 	mov ah, '1'
-	call iterateMap ; iterate the map and add a tile at every ' ' on the map
+	call iterateMap ; iterate the map and add a tile at every '1' on the map
 
 	mov si, agila
 	mov bp, drawBlock
 	mov ah, 'X'
+	call iterateMap ; iterate the map and add a tile at every 'X' on the map
+
+	mov si, arbusto
+	mov bp, drawBlock
+	mov ah, '2'
 	call iterateMap ; iterate the map and add a tile at every ' ' on the map
 
 
@@ -390,7 +395,7 @@ spawnPlayer:
 	ret
 
 		
-%define tileWidth      8
+%define tileWidth      12
 %define ASCIImapWidth  64
 %define ASCIImapHeight 64
 ;bp = function to call, ah = search for, si = parameter for bp function
@@ -461,7 +466,7 @@ entityArray:
 
 ;player structure
 player:
-player_Anim  dw playerImg_right ;pointer to animation
+player_Anim  dw tankImg_right ;pointer to animation
 player_PosX  dw 0x32              ;position of player (x)
 player_PosZ  dw 0x32               ;position of player (z)
 player_AnimC dw 0               ;animation counter
@@ -478,28 +483,32 @@ entityArrayMem:
 	resw entityArraySize*4
 
 ;animation structure
-playerImg_front:
-	dw 1
-	dw 1
-	dw tank_Down
+tankImg_front:
+	dw 5
+	dw 10
+	dw tank_Down_1
+	dw tank_Down_2
 	dw 0
 	
-playerImg_back:
-    dw 1
-	dw 1
-	dw tank_Up
+tankImg_back:
+    dw 5
+	dw 10
+	dw tank_Up_1
+	dw tank_Up_2
 	dw 0
 	
-playerImg_right:
-    dw 1
-	dw 1
-	dw tank_Right
+tankImg_right:
+    dw 5
+	dw 10
+	dw tank_Right_1
+	dw tank_Right_2
 	dw 0
 	
-playerImg_left:
-	dw 1
-	dw 1
-	dw tank_Left
+tankImg_left:
+	dw 5
+	dw 10
+	dw tank_Left_1
+	dw tank_Left_2
 	dw 0
 	
 boxImg:
@@ -508,32 +517,26 @@ boxImg:
 	dw boxImg_0     ;frames
 	dw 0            ;zero end frame
 
-boxImg2:
-	dw 1            ;time per frames
-	dw 1            ;time of animation
-	dw boxImg_1     ;frames
-	dw 0            ;zero end frame
-	
-agilaImg:
-	dw 1            ;time per frames
-	dw 1           ;time of animation
-	dw agila       ;frames
-	dw 0            ;zero end frame
+tank_Up_1 incbin "img/bin/tank_Up_1.bin"
+tank_Up_2 incbin "img/bin/tank_Up_2.bin"
+tank_Down_1 incbin "img/bin/tank_Down_1.bin"
+tank_Down_2 incbin "img/bin/tank_Down_2.bin"
+tank_Right_1 incbin "img/bin/tank_Right_1.bin"
+tank_Right_2 incbin "img/bin/tank_Right_2.bin"
+tank_Left_1 incbin "img/bin/tank_Left_1.bin"
+tank_Left_2 incbin "img/bin/tank_Left_2.bin"
 
-tank_Up incbin "img/tank_Up.bin"
-tank_Down incbin "img/tank_Down.bin"
-tank_Right incbin "img/tank_Right.bin"
-tank_Left incbin "img/tank_Left.bin"
-
-agila  incbin "img/agila.bin"
+agila  incbin "img/bin/agila.bin"
 
 ;boxImg_0         incbin "img/box.bin"
 
-boxImg_0         incbin "img/block1.bin"
-boxImg_1         incbin "img/bloque2.bin"
-tileImg_0        incbin "img/tile.bin"
+boxImg_0         incbin "img/bin/block1.bin"
+boxImg_1         incbin "img/bin/bloque2.bin"
 
-ASCIImap          incbin "img/map.bin"
+arbusto      incbin "img/bin/arbusto.bin"
+tileImg_0    incbin "img/bin/tile.bin"
+
+ASCIImap     incbin "img/bin/map.bin"
 db 0
 
 %assign usedMemory ($-$$)
