@@ -57,7 +57,8 @@ gameLoop:
 	call copyBufferOver ;draw frame to screen
 	
 	call gameControls ;handle control logic
-	
+
+	call checkEntitys
 	call synchronize ;synchronize emulator and real application through delaying
 	
 jmp gameLoop
@@ -97,6 +98,23 @@ drawEntity:
 
 ;di = entity, cx = new_xpos, dx = new_zpos, bp = new animation
 ;fixed for modular entity system
+checkEntitys:
+	pusha                       ;save current state
+	;mov si, coinFound         ;set si to entityArray
+	mov bx, word [coinFound]          ;read entityArray entry
+	cmp bx, 3                 ;if entry is zero => end of array
+	je .END
+	jmp .Continue
+
+	.END:
+		call Game_over
+
+	.Continue:
+	
+	popa                 ;reload old register state
+	ret
+	
+
 checkForCollision:
 	pusha                       ;save current state
 	mov si, entityArray         ;set si to entityArray
@@ -160,9 +178,10 @@ checkForCollision:
 		call collideMap
 		popa
 		jnc .noMapCollision
-			;if we reach this point => actual collision
-			mov cx, [di+2]         ;set new x pos to current x pos => no movement
-			mov dx, [di+4]         ;set new z pos to current z pos => no movement
+		;if we reach this point => actual collision
+		mov cx, [di+2]         ;set new x pos to current x pos => no movement
+		mov dx, [di+4]         ;set new z pos to current z pos => no movement
+		;call Game_over
 		.noMapCollision:
 		mov byte [canWalk], 1
 		mov word [di]   ,bp  ;update the animation in use
@@ -341,8 +360,13 @@ setSpawn:
 initMap:
 	mov si, tank2Img_right
 	mov bp, addEntity
-	mov ah, 'B'
+	mov ah, 'R'
 	call iterateMap
+	mov si, tank2Img_front
+	mov bp, addEntity
+	mov ah, 'D'
+	call iterateMap
+	
 	call spawnPlayer ; set spawn for player
 	ret
 	
@@ -457,7 +481,120 @@ blockCollison:
 %include "buffer.asm"
 
 
+Game_over:  
+	push 0 
+	push 0 
+	push 320                  ; clear screen 
+	push 200 
+	push 0 
+	call draw_rectangle 
+	add esp , 10 
+	
+	xor bx , bx 
+
+	displaymsg: 
+		mov byte al , [gameOverMsg+bx]  
+		cmp al , 0
+		jz displaymsg2
+		mov ah , 0x0e 
+		int 10h  
+		 inc bx 
+		jmp displaymsg 
+
+	displaymsg2: 
+		mov byte al , [pressRestart+bx]  
+		cmp al , 0
+		jz return_it2
+		mov ah , 0x0e 
+		int 10h  
+			inc bx 
+		jmp displaymsg2 
+			  
+	return_it2:
+		mov ah , 10h 
+		int 16h   
+		
+		db 0x0ea 
+		dw 0xffff ; jmp far 0xffff (CTRL+ALT+DEL) 
+		dw 0x0000 
+		ret
+
+draw_pixel:
+	; ds , es , fs , gs , cs , si , di , bx 
+    mov cx, 0A000h ; The offset to video memory
+    mov es,cx
+    mov ax,[esp+4] ; Y coord
+    mov cx,320     
+    mul cx
+    mov bx,[esp+6] ; X coord
+    add ax,bx
+    mov di,ax
+    mov dx,[esp+2]
+    mov byte [es:di],dl
+    ret
+
+draw_rectangle:
+	push ax 
+	push bx 
+	push cx 
+	push dx 
+	push si 
+	push di 
+	push ds 
+    xor bx,bx
+
+    loop1:
+        xor ax,ax
+
+        loop2:
+            mov di , [esp+24] ;x
+            mov si , [esp+22] ;y
+
+            add di ,bx
+            add si ,ax
+
+            mov dx , [esp+16] ; color
+            push dx
+            push bx
+            push ax
+            push di
+            push si
+            push dx
+            call  draw_pixel
+            add esp,6
+            pop ax
+            pop bx
+            pop dx
+
+            mov si , [esp+18] ; height
+            inc ax
+            cmp ax , si
+            jl loop2
+
+        mov di , [esp+20] ; width
+        inc bx
+        cmp bx , di
+        jl loop1
+
+	pop ds 
+	pop di 
+	pop si 
+	pop dx 
+	pop cx 
+	pop bx 
+	pop ax 
+    ret
+
+
 ;game value
+
+gameState: dw 0                      ; The state of the game 0= playing ; 1= gameOver 
+gameOverMsg:                         ; Game Over messages
+	db 10,10,10,10,10,10,10,10,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Game Over!",10,13
+	db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Your Score",10,13 
+	db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ,0
+pressRestart:                        ; Press Restart messages
+	db 10,13,20h,20h,20h,20h,20h,20h,20h,20h, "Press any key to Restart" ,0
 
 coinFound dw 0
 
