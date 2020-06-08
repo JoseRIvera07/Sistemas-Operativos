@@ -1,16 +1,24 @@
 org 0x8000
-bits 16 
+bits 16
 
 ;precompiler constant
 %define entityArraySize 16
 ;Let's begin by going into graphic mode
-call initGraphics
 
-;Now let's register some custom interrupt handlers
-call registerInterruptHandlers
+iniciar:
+	mov word [gameState], 0
 
-;init map
-call initMap
+	mov word [coinFound], 0
+
+	call initGraphics
+
+	;Now let's register some custom interrupt handlers
+	call registerInterruptHandlers
+
+	;init map
+	call initMap
+
+	
 
 ;Main game loop
 gameLoop:
@@ -59,8 +67,13 @@ gameLoop:
 	call gameControls ;handle control logic
 
 	call checkEntitys
+
+	call restartGame
+
 	call synchronize ;synchronize emulator and real application through delaying
 	
+
+
 jmp gameLoop
 
 
@@ -102,18 +115,83 @@ checkEntitys:
 	pusha                       ;save current state
 	;mov si, coinFound         ;set si to entityArray
 	mov bx, word [coinFound]          ;read entityArray entry
-	cmp bx, 3                 ;if entry is zero => end of array
+	cmp bx, 5               
 	je .END
 	jmp .Continue
 
 	.END:
-		call Game_over
+		;inc word [level]
+		mov bx,word[level]
+		cmp bx, 3
+		je .END2
+		jmp .Continue2
+
+		.END2:
+			call Game_over
+
+		.Continue2:
+			inc word [level]
+			call iniciar
+			jmp gameLoop
+			popa
+		;mov word [gameState], 1
+		;call Game_over
 
 	.Continue:
-	
-	popa                 ;reload old register state
-	ret
-	
+		popa                ;reload old register state
+		ret
+
+%define tileWidth      12
+%define ASCIImapWidth  32
+%define ASCIImapHeight 32
+;bp = function to call, ah = search for, si = parameter for bp function
+iterateMap: ;cambiar aqui el mapa
+	push bx
+	mov bx, word [level]
+	cmp bx, 1
+	je .MAP1 
+	cmp bx, 2
+	je .MAP2 
+	cmp bx, 3
+	je .MAP3 
+	.MAP1:
+		mov di, ASCIImap_1
+		jmp .NEXT
+		
+	.MAP2:
+		mov di, ASCIImap_2
+		jmp .NEXT
+
+	.MAP3:
+		mov di, ASCIImap_3
+		jmp .NEXT
+
+	.NEXT:
+		pop bx
+		mov cx, 0x0 ; map start x
+		mov dx, 0x0 ; map start y
+		.next:
+		mov al, [di]
+		test al, al
+		je .stop    ; stop when null terminator found
+		cmp al, ah
+		jne .skip   ; skip if the character is not the one this iteration is searching for
+		push ax     ; save the content of ax
+		call bp     ; call the specified function of this iteration
+		pop ax
+		jc .term    ; the carry flag determines if the specified function has found what it was searching for (and thus exits)
+		.skip:
+			inc di                           ; point to the next character
+			add cx, tileWidth                ; increase x pixel position
+			cmp cx, ASCIImapWidth*tileWidth  ; check if x position is at the end of the line
+			jl .next
+		sub dx, tileWidth                    ; decrease y pixel position
+		xor cx, cx                           ; reset x position
+		jmp .next
+		.stop:
+			clc
+		.term:
+		ret
 
 checkForCollision:
 	pusha                       ;save current state
@@ -191,7 +269,9 @@ checkForCollision:
 	ret
 
 canWalk db 0
+
 gameControls:
+	
 	mov byte [canWalk], 0
 	mov di, player ;select the player as the main entity for "checkForCollision"
 	mov al, byte [pressA]
@@ -250,6 +330,7 @@ pressA db 0
 pressD db 0
 pressW db 0
 pressS db 0
+pressR db 0
 keyboardINTListener: ;interrupt handler for keyboard events
 	pusha	
 		xor bx,bx ; bx = 0: signify key down event
@@ -259,22 +340,26 @@ keyboardINTListener: ;interrupt handler for keyboard events
 		jnc .keyDown
 			dec bx ; bx = 1: key up event
 		.keyDown:
-		cmp al,4bh ;a
+		cmp al,4bh ;izq
 		jne .check1         
 			mov byte [cs:pressA], bl ;use cs overwrite because we don't know where the data segment might point to
 		.check1:
-		cmp al,4dh ;d
+		cmp al,4dh ;derecha
 		jne .check2
 			mov byte [cs:pressD], bl
 		.check2:
-		cmp al,48h ;w
+		cmp al,48h ;arriba
 		jne .check3
 			mov byte [cs:pressW], bl
 		.check3:
-		cmp al,50h ;s
+		cmp al,50h ;abajo
 		jne .check4
 			mov byte [cs:pressS], bl
 		.check4:
+		cmp al,0x1e ;a
+		jne .check5
+			mov byte [cs:pressR], bl
+		.check5:
 		mov al, 20h ;20h
 		out 20h, al ;acknowledge the interrupt so further interrupts can be handled again 
 	popa ;resume state to not modify something by accident
@@ -366,7 +451,11 @@ initMap:
 	mov bp, addEntity
 	mov ah, 'D'
 	call iterateMap
-	
+	mov si, tank2Img_left
+	mov bp, addEntity
+	mov ah, 'L'
+	call iterateMap
+
 	call spawnPlayer ; set spawn for player
 	ret
 	
@@ -420,38 +509,6 @@ spawnPlayer:
 	mov ah, 'P'
 	call iterateMap ; iterate the map and set the player position to the last 'P' found on the map
 	ret
-
-		
-%define tileWidth      12
-%define ASCIImapWidth  64
-%define ASCIImapHeight 64
-;bp = function to call, ah = search for, si = parameter for bp function
-iterateMap:
-	mov di, ASCIImap
-	mov cx, 0x0 ; map start x
-	mov dx, 0x0 ; map start y
-	.next:
-	mov al, [di]
-	test al, al
-	je .stop    ; stop when null terminator found
-	cmp al, ah
-	jne .skip   ; skip if the character is not the one this iteration is searching for
-	push ax     ; save the content of ax
-	call bp     ; call the specified function of this iteration
-	pop ax
-	jc .term    ; the carry flag determines if the specified function has found what it was searching for (and thus exits)
-	.skip:
-		inc di                           ; point to the next character
-		add cx, tileWidth                ; increase x pixel position
-		cmp cx, ASCIImapWidth*tileWidth  ; check if x position is at the end of the line
-		jl .next
-	sub dx, tileWidth                    ; decrease y pixel position
-	xor cx, cx                           ; reset x position
-	jmp .next
-	.stop:
-		clc
-	.term:
-	ret
 	
 ;si = player x, bx = player z, cx = block x, dx = block z
 blockCollison:
@@ -480,6 +537,28 @@ blockCollison:
 	
 %include "buffer.asm"
 
+restartGame:
+	pusha
+	;mov bx, word [gameState]
+	;cmp bx, 1
+	;je .RESTART
+	;jmp .noGameOver
+	;.RESTART:
+	mov al, byte [pressR]
+	cmp al, 0
+	jz .noGameOver
+	jmp .REINICIAR
+	.REINICIAR
+		mov word [level], 1
+		;inc word [level]
+		call iniciar
+		jmp gameLoop
+		popa 
+			
+	.noGameOver:
+		popa
+		ret
+
 
 Game_over:  
 	push 0 
@@ -495,20 +574,27 @@ Game_over:
 	displaymsg: 
 		mov byte al , [gameOverMsg+bx]  
 		cmp al , 0
-		jz displaymsg2
+		jz return_it
 		mov ah , 0x0e 
 		int 10h  
 		 inc bx 
 		jmp displaymsg 
 
-	displaymsg2: 
-		mov byte al , [pressRestart+bx]  
-		cmp al , 0
-		jz return_it2
-		mov ah , 0x0e 
-		int 10h  
-			inc bx 
-		jmp displaymsg2 
+	return_it:
+		mov word ax ,[level] 
+		push ax 
+		call print_decimal 
+		add esp , 2  
+		xor bx , bx
+
+		displaymsg2: 
+			mov byte al , [pressRestart+bx]  
+			cmp al , 0
+			jz return_it2
+			mov ah , 0x0e 
+			int 10h  
+			 inc bx 
+			jmp displaymsg2 
 			  
 	return_it2:
 		mov ah , 10h 
@@ -518,6 +604,55 @@ Game_over:
 		dw 0xffff ; jmp far 0xffff (CTRL+ALT+DEL) 
 		dw 0x0000 
 		ret
+
+print_decimal:   
+	xor dx , dx 
+	mov ax , [esp+2]  ; 1023
+	mov bx , 10000 
+	div bx  
+	
+	;mov al , ah
+	mov bx , table 
+	xlat
+	mov ah , 0x0e 
+	int 10h 
+	
+	mov ax , dx 
+	xor dx , dx 
+	mov bx , 1000 
+	div bx 
+	
+	mov bx , table 
+	xlat
+	mov ah , 0x0e 
+	int 10h 
+	
+	mov ax , dx
+	xor dx , dx 
+	mov bx  ,100 
+	div bx 
+	
+	mov bx , table 
+	xlat
+	mov ah , 0x0e  
+	int 10h 
+	
+	mov ax , dx 
+	xor dx , dx 
+	mov bx , 10 
+	div bx 
+	
+	mov bx , table 
+	xlat
+	mov ah , 0x0e 
+	int 10h  
+	
+	mov ax , dx 
+	mov bx , table 
+	xlat 
+	mov ah , 0x0e 
+	int 10h
+	ret 
 
 draw_pixel:
 	; ds , es , fs , gs , cs , si , di , bx 
@@ -590,13 +725,17 @@ draw_rectangle:
 
 gameState: dw 0                      ; The state of the game 0= playing ; 1= gameOver 
 gameOverMsg:                         ; Game Over messages
-	db 10,10,10,10,10,10,10,10,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Game Over!",10,13
-	db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Your Score",10,13 
+	db 10,10,10,10,10,10,10,10,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Level Over!",10,13
+	db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,"Your Level",10,13 
 	db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ,0
 pressRestart:                        ; Press Restart messages
-	db 10,13,20h,20h,20h,20h,20h,20h,20h,20h, "Press any key to Restart" ,0
+	db 10,13,20h,20h,20h,20h,20h,20h,20h,20h, "Press R key to Restart" ,0
 
 coinFound dw 0
+
+level dw 1
+
+table: db "0123456789ABCDEF"         ; Translation table used for printing hex and decimal score
 
 ;entity array
 
@@ -664,12 +803,6 @@ tank2Img_front:
 	dw tank2_Down_2
 	dw 0
 	
-tank2Img_back:
-    dw 5
-	dw 10
-	dw tank2_Up_1
-	dw tank2_Up_2
-	dw 0
 	
 tank2Img_right:
     dw 5
@@ -684,6 +817,24 @@ tank2Img_left:
 	dw tank2_Left_1
 	dw tank2_Left_2
 	dw 0
+
+
+tank2_Down_1 incbin "img/bin/tank2_Down_1.bin"
+tank2_Down_2 incbin "img/bin/tank2_Down_2.bin"
+tank2_Right_1 incbin "img/bin/tank2_Right_1.bin"
+tank2_Right_2 incbin "img/bin/tank2_Right_2.bin"
+tank2_Left_1 incbin "img/bin/tank2_Left_1.bin"
+tank2_Left_2 incbin "img/bin/tank2_Left_2.bin"
+;-------------------------------------------------------
+
+ASCIImap_1    incbin "img/bin/map1.bin"
+
+agila  incbin "img/bin/agila.bin"
+boxImg_0     incbin "img/bin/block1.bin"
+boxImg_1     incbin "img/bin/bloque2.bin"
+arbusto      incbin "img/bin/arbusto.bin"
+tileImg_0    incbin "img/bin/tile.bin"
+ASCIImap_2    incbin "img/bin/map2.bin"
 ;------------------------------------------------------------
 tank_Up_1 incbin "img/bin/tank_Up_1.bin"
 tank_Up_2 incbin "img/bin/tank_Up_2.bin"
@@ -694,32 +845,11 @@ tank_Right_2 incbin "img/bin/tank_Right_2.bin"
 tank_Left_1 incbin "img/bin/tank_Left_1.bin"
 tank_Left_2 incbin "img/bin/tank_Left_2.bin"
 ;-------------------------------------------------------
+ASCIImap_3    incbin "img/bin/map3.bin"
 
-tank2_Up_1 incbin "img/bin/tank2_Up_1.bin"
-tank2_Up_2 incbin "img/bin/tank2_Up_2.bin"
-tank2_Down_1 incbin "img/bin/tank2_Down_1.bin"
-tank2_Down_2 incbin "img/bin/tank2_Down_2.bin"
-tank2_Right_1 incbin "img/bin/tank2_Right_1.bin"
-tank2_Right_2 incbin "img/bin/tank2_Right_2.bin"
-tank2_Left_1 incbin "img/bin/tank2_Left_1.bin"
-tank2_Left_2 incbin "img/bin/tank2_Left_2.bin"
-;-------------------------------------------------------
-
-agila  incbin "img/bin/agila.bin"
-
-;boxImg_0         incbin "img/box.bin"
-
-boxImg_0         incbin "img/bin/block1.bin"
-boxImg_1         incbin "img/bin/bloque2.bin"
-
-arbusto      incbin "img/bin/arbusto.bin"
-tileImg_0    incbin "img/bin/tile.bin"
-
-ASCIImap     incbin "img/bin/map.bin"
-db 0
 
 %assign usedMemory ($-$$)
-%assign usableMemory (512*32)
+%assign usableMemory (512*64)
 %warning [usedMemory/usableMemory] Bytes used
-times (512*32)-($-$$) db 0 ;kernel must have size multiple of 512 so let's pad it to the correct size
+times (512*64)-($-$$) db 0 ;kernel must have size multiple of 512 so let's pad it to the correct size
 ;times (512*1000)-($-$$) db 0 ;toggle this to use in bochs
